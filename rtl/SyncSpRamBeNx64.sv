@@ -31,7 +31,7 @@ module SyncSpRamBeNx64
   parameter DATA_DEPTH = 1024, // usually 2**ADDR_WIDTH, but can be lower
   parameter OUT_REGS   = 0,    // set to 1 to enable outregs
   parameter SIM_INIT   = 0     // for simulation only, will not be synthesized
-                               // 0: no init, 1: zero init, 2: random init, 3: deadbeef init
+                               // 0: no init, 1: zero init, 2: random init, 3: deadbeef init, 4: readmemh init
                                // note: on verilator, 2 is not supported. define the VERILATOR macro to work around.
 )(
   input  logic                  Clk_CI,
@@ -53,7 +53,7 @@ module SyncSpRamBeNx64
 
   logic [DATA_BYTES*8-1:0] RdData_DN;
   logic [DATA_BYTES*8-1:0] RdData_DP;
-
+   
   ////////////////////////////
   // XILINX implementation
   ////////////////////////////
@@ -65,14 +65,15 @@ module SyncSpRamBeNx64
       //pragma translate_off
       automatic logic [63:0] val;
       if(Rst_RBI == 1'b0 && SIM_INIT>0) begin
-        for(int k=0; k<DATA_DEPTH;k++) begin
-          if(SIM_INIT==1) val = '0;
+         if (SIM_INIT==1) for(int k=0; k<DATA_DEPTH;k++) Mem_DP[k] = '0;
       `ifndef VERILATOR
-          else if(SIM_INIT==2) void'(randomize(val));
+         else if(SIM_INIT==2) for(int k=0; k<DATA_DEPTH;k++)
+	   begin
+	      void'(randomize(val));
+	      Mem_DP[k] = val;
+	   end
       `endif
-          else val = 64'hdeadbeefdeadbeef;
-          Mem_DP[k] = val;
-        end
+	  else if (SIM_INIT != 4) for(int k=0; k<DATA_DEPTH;k++) Mem_DP[k] = 64'hdeadbeefdeadbeef;
       end else
       //pragma translate_on
       if(CSel_SI) begin
@@ -172,5 +173,36 @@ module SyncSpRamBeNx64
       $error("FPGA target not defined, define  FPGA_TARGET_XILINX or FPGA_TARGET_ALTERA.");
     `endif
   `endif
+
+   initial if (SIM_INIT==4)
+     begin
+	automatic logic [7:0][7:0] mem_row, prev_mem_row;
+	longint address, len;
+	string 	vlog = "";
+	if ($value$plusargs("PRELOAD=%s", vlog))
+	  $display("%m: +PRELOAD=%s", vlog);
+	if (vlog != "") begin
+	   typedef enum {maxsiz=1048576} max_t;
+	   logic [7:0] 	tmp [maxsiz-1:0];
+	   for (int i = 0; i <= maxsiz; i++) tmp[i] = 0;
+	   $display("Loading .. %s", vlog);
+	   $readmemh(vlog, tmp);
+	   len = maxsiz/8;
+`ifndef verilator
+	   while (1'bx === ^tmp[--len])
+	     ;
+	   $display("words detected: %d", len);
+`endif
+	   for (int i = 0; i < len; i++)
+	     begin
+		mem_row = {tmp[i*8+7],tmp[i*8+6],tmp[i*8+5],tmp[i*8+4],
+			   tmp[i*8+3],tmp[i*8+2],tmp[i*8+1],tmp[i*8+0]};
+		if (mem_row || (mem_row !== prev_mem_row))
+		  $display("mem[%d] = %x", i, mem_row);
+		prev_mem_row = mem_row;
+		Mem_DP[i] = mem_row;
+	     end
+	end // if (vlog != "")
+     end // initial begin
 
 endmodule // SyncSpRamBeNx64
