@@ -197,7 +197,7 @@ reg iRXBI; // 612
 reg iFERE; // 612
 reg iPERE; // 612
 reg iBIRE; // 612
-integer iFECounter; // 900
+reg [6:0] iFECounter; // 900
 reg iFEIncrement; // 612
 reg iFEDecrement; // 612
 reg iRDAInterrupt; // 612
@@ -256,7 +256,6 @@ always @(posedge CLK or posedge iRST)
   if ((iRST ==  1'b1))
     begin
        iIER[3:0] <= 0;
-       iIER[7:4] <= 0;
     end
   else
     begin
@@ -270,6 +269,8 @@ assign /*432*/ iIER_ERBI = iIER[0]; // 434
 assign /*432*/ iIER_ETBEI = iIER[1]; // 434
 assign /*432*/ iIER_ELSI = iIER[2]; // 434
 assign /*432*/ iIER_EDSSI = iIER[3]; // 434
+assign iIER[7:4] = 0;
+
 uart_interrupt UART_IIC (
 	.CLK(CLK),
 	.RST(iRST),
@@ -423,7 +424,6 @@ always @(posedge CLK or posedge iRST)
   if ((iRST ==  1'b1))
     begin
        iMCR[5:0] <= 0;
-       iMCR[7:6] <= 0;
     end
   else
     begin
@@ -439,6 +439,7 @@ assign /*432*/ iMCR_OUT1 = iMCR[2]; // 434
 assign /*432*/ iMCR_OUT2 = iMCR[3]; // 434
 assign /*432*/ iMCR_LOOP = iMCR[4]; // 434
 assign /*432*/ iMCR_AFE = iMCR[5]; // 434
+assign iMCR[7:6] = 0;
 
 always @(posedge CLK or posedge iRST)
   if ((iRST ==  1'b1))
@@ -715,8 +716,8 @@ assign /*432*/ iRXClear =  1'b0; // 434
 assign /*903*/ iSIN = iMCR_LOOP ==  1'b0 ? iSINr :  iSOUT; // 905
 assign /*903*/ iTXEnable = iTXFIFOEmpty ==  1'b0 && (iMCR_AFE ==  1'b0 | (iMCR_AFE ==  1'b1 && iMSR_CTS ==  1'b1)) ?  1'b1 :   1'b0; // 905
 
-   typedef enum {TXIDLE, TXSTART, TXRUN, TXEND} tx_state_type;
-   typedef enum {RXIDLE, RXSAVE} rx_state_type;
+   typedef enum logic [1:0] {TXIDLE, TXSTART, TXRUN, TXEND} tx_state_type;
+   typedef enum logic {RXIDLE, RXSAVE} rx_state_type;
    
    rx_state_type rx_State;
    tx_state_type tx_State;
@@ -883,9 +884,11 @@ always @(PADDR or iLCR_DLAB or iRBR or iDLL or iDLM or iIER or iIIR or iLCR or i
          begin
             if ((iLCR_DLAB ==  1'b0))
               begin
+                 PRDATA[7:0] <= iRBR;
               end
             else
               begin
+                 PRDATA[7:0] <= iDLL;
               end
          end
        
@@ -893,44 +896,54 @@ always @(PADDR or iLCR_DLAB or iRBR or iDLL or iDLM or iIER or iIIR or iLCR or i
          begin
             if ((iLCR_DLAB ==  1'b0))
               begin
+                 PRDATA[7:0] <= iIER;
               end
             else
               begin
+                 PRDATA[7:0] <= iDLM;
               end
          end
        
        3'b010:
          begin
+            PRDATA[7:0] <= iIIR;
          end
        
        3'b011:
          begin
+            PRDATA[7:0] <= iLCR;
          end
        
        3'b100:
          begin
+            PRDATA[7:0] <= iMCR;
          end
        
        3'b101:
          begin
+            PRDATA[7:0] <= iLSR;
          end
        
        3'b110:
          begin
+            PRDATA[7:0] <= iMSR;
          end
        
        3'b111:
          begin
+            PRDATA[7:0] <= iSCR;
          end
        
        default:
          begin
+            PRDATA[7:0] <= iRBR;
          end
        
      endcase
 
   end
 
+assign PRDATA[31:8] = 24'b0;
 assign /*432*/ PREADY =  1'b1; // 434
 assign /*432*/ PSLVERR =  1'b0; // 434
 

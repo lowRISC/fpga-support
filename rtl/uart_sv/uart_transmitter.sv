@@ -50,7 +50,7 @@ module uart_transmitter(
 /* design uart_transmitter */
 /* architecture rtl */
 typedef enum {FALSE,TRUE} bool_t; // 527
-typedef enum {IDLE,
+typedef enum logic [3:0] {IDLE,
 START,
 BIT0,
 BIT1,

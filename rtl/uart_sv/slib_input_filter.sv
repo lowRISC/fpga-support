@@ -42,7 +42,7 @@ module slib_input_filter #(parameter SIZE = 4) (
 /* architecture rtl */
 typedef enum {FALSE,TRUE} bool_t; // 527
 
-reg [$clog2(SIZE)-1:0] iCount;
+reg [$clog2(SIZE+1)-1:0] iCount;
    
 always @(posedge CLK or posedge RST)
   begin

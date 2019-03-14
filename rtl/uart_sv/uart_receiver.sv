@@ -51,7 +51,7 @@ module uart_receiver(
 /* design uart_receiver */
 /* architecture rtl */
 typedef enum {FALSE,TRUE} bool_t; // 527
-typedef enum {IDLE,
+typedef enum [2:0] {IDLE,
 START,
 DATA,
 PAR,
@@ -67,7 +67,7 @@ reg iFSIN; // 612
 reg iFStopBit; // 612
 reg iParity; // 612
 reg iParityReceived; // 612
-integer iDataCount; // 900
+reg [3:0] iDataCount; // 900
 reg iDataCountInit; // 612
 reg iDataCountFinish; // 612
 reg iRXFinished; // 612
@@ -139,6 +139,7 @@ always @(posedge CLK or posedge RST)
          begin
             if ((iBaudStep ==  1'b1 && iDataCountFinish ==  1'b0))
               begin
+                 iDOUT[iDataCount] <= iFSIN;
                  iDataCount <= iDataCount + 1; // 413
               end
          end
