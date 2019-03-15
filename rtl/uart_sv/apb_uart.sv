@@ -791,7 +791,7 @@ assign /*903*/ iTXEnable = iTXFIFOEmpty ==  1'b0 && (iMCR_AFE ==  1'b0 | (iMCR_A
                   begin
                      if (iRXFinished == 1'b1)
                        begin // Receive finished
-                          iRXFIFOD <= iRXBI & iRXFE & iRXPE & iRXData;
+                          iRXFIFOD <= {iRXBI, iRXFE, iRXPE, iRXData};
                           if (iFCR_FIFOEnable == 1'b0)
                             iRXFIFOClear <= 1'b1;    // Non-FIFO mode
                           rx_State <= RXSAVE;
